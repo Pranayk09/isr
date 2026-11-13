@@ -1,0 +1,86 @@
+
+import requests
+
+def get_weather(city):
+    try:
+        # Step 1: Get city coordinates
+        geo_url = "https://geocoding-api.open-meteo.com/v1/search"
+
+        geo_response = requests.get(
+            geo_url,
+            params={"name": city, "count": 1},
+            timeout=10
+        )
+        geo_response.raise_for_status()
+
+        locations = geo_response.json().get("results", [])
+
+        if not locations:
+            print("City not found!")
+            return
+
+        location = locations[0]
+        latitude = location["latitude"]
+        longitude = location["longitude"]
+
+        # Step 2: Fetch live weather
+        weather_url = "https://api.open-meteo.com/v1/forecast"
+
+        params = {
+            "latitude": latitude,
+            "longitude": longitude,
+            "current": "temperature_2m,wind_speed_10m,weather_code"
+        }
+
+        response = requests.get(
+            weather_url,
+            params=params,
+            timeout=10
+        )
+        response.raise_for_status()
+
+        weather = response.json()["current"]
+
+        # Step 3: Weather descriptions
+        weather_codes = {
+            0: "Clear sky",
+            1: "Mainly clear",
+            2: "Partly cloudy",
+            3: "Overcast",
+            45: "Foggy",
+            48: "Depositing rime fog",
+            51: "Light drizzle",
+            61: "Slight rain",
+            63: "Moderate rain",
+            65: "Heavy rain",
+            71: "Slight snow",
+            80: "Rain showers",
+            95: "Thunderstorm"
+        }
+
+        description = weather_codes.get(
+            weather["weather_code"],
+            "Unknown weather condition"
+        )
+
+        # Step 4: Display report
+        print("\n----- LIVE WEATHER REPORT -----")
+        print("City:", location["name"])
+        print("Country:", location.get("country", ""))
+        print("Temperature:",
+              weather["temperature_2m"], "°C")
+        print("Wind Speed:",
+              weather["wind_speed_10m"], "km/h")
+        print("Description:", description)
+        print("Updated:", weather["time"])
+
+    except requests.RequestException as error:
+        print("Network/API error:", error)
+
+    except (KeyError, ValueError) as error:
+        print("Invalid weather response:", error)
+
+
+# Main program
+city = input("Enter city name: ")
+get_weather(city)
