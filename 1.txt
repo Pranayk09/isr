@@ -1,0 +1,70 @@
+import pandas as pd
+import nltk
+from nltk.corpus import stopwords
+from nltk.tokenize import word_tokenize
+from nltk.stem import PorterStemmer, WordNetLemmatizer
+nltk.download('wordnet')
+
+
+with open(document, "r") as file:
+    text = file.read();
+
+    print(text)
+
+
+tokens = word_tokenize(text.lower())
+stop_words = set(stopwords.words("english"))
+words = [w for w in tokens if w.isalnum() and w not in stop_words]
+print(words)
+
+stemmer = PorterStemmer()
+conflated = [stemmer.stem(w) for w in words]
+print(conflated)
+
+lemmatizer = WordNetLemmatizer()
+lemma = [lemmatizer.lemmatize(w) for w in words]
+print(lemma)
+
+
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
+
+docs = [s.strip() for s in text.split(".") if s.strip()];
+new_docs=[]
+
+for doc in docs:
+    words=word_tokenize(doc.lower());
+    words = [w for w in words if w.isalnum() and w not in stop_words]
+    words= [stemmer.stem(w) for w in words]
+    new_docs.append(" ".join(words))
+
+
+v = TfidfVectorizer()
+x = v.fit_transform(new_docs)
+
+
+clusters = []
+threshold = 0.2
+
+for i in range(len(docs)):
+
+    found = False
+
+    for c in clusters:
+        sim = cosine_similarity(x[i], x[c[0]])[0][0]
+
+        if sim >= threshold:
+            c.append(i)
+            found = True
+            break
+            
+    if not found:
+          clusters.append([i])
+
+
+
+for i, c in enumerate(clusters):
+    print("\nCluster", i+1)
+
+    for j in c:
+        print(docs[j])
