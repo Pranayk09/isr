@@ -1,0 +1,62 @@
+
+import requests
+import csv
+import time
+from bs4 import BeautifulSoup
+from urllib.parse import urljoin
+
+BASE_URL = "https://books.toscrape.com/"
+HEADERS = {"User-Agent": "Mozilla/5.0"}
+
+products = []
+
+# Crawl only first 3 pages
+for page in range(1, 4):
+
+    url = BASE_URL + f"catalogue/page-{page}.html"
+    print("Crawling:", url)
+
+    response = requests.get(url, headers=HEADERS)
+    soup = BeautifulSoup(response.text, "html.parser")
+
+    # Extract product links
+    items = soup.select("article.product_pod h3 a")
+
+    for item in items:
+        product_url = urljoin(url, item["href"])
+
+        product_response = requests.get(
+            product_url, headers=HEADERS
+        )
+        product_soup = BeautifulSoup(
+            product_response.text, "html.parser"
+        )
+
+        # Extract product details
+        title = product_soup.find("h1")
+        price = product_soup.select_one(".price_color")
+        availability = product_soup.select_one(".availability")
+
+        products.append({
+            "Name": title.text.strip() if title else "",
+            "Price": price.text.strip() if price else "",
+            "Availability": availability.text.strip() if availability else "",
+            "Link": product_url
+        })
+
+        print("Found:", title.text.strip() if title else "Unknown")
+        time.sleep(0.3)
+
+# Save products to CSV
+with open("products.csv", "w", newline="", encoding="utf-8") as file:
+
+    writer = csv.DictWriter(
+        file,
+        fieldnames=["Name", "Price", "Availability", "Link"]
+    )
+
+    writer.writeheader()
+    writer.writerows(products)
+
+print("\nTotal products extracted:", len(products))
+print("Data saved successfully in products.csv")
